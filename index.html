@@ -1038,8 +1038,8 @@
         });
 
         // ==================== WEATHER API ====================
-        const WEATHER_API_KEY = 'YOUR_OPENWEATHER_API_KEY'; // Replace with your API key
-        const DEFAULT_CITY = 'Mumbai';
+        const WEATHER_API_KEY = '7c1b56b88375d9d8e05aa07d8506500d';  
+        const DEFAULT_CITY = 'Ahmedabad';
         
         async function fetchWeatherData(city) {
             try {
@@ -1401,7 +1401,10 @@
             document.getElementById('currentDate').innerHTML = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             console.log('✅ FarmAI System Ready!');
             console.log('ℹ️ Note: Replace YOUR_OPENWEATHER_API_KEY with your actual API key for live weather');
+            updateLanguage();
+            updateGreeting();
         });
+        
     </script>
 </body>
 </html>
