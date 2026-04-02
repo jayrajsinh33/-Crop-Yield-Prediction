@@ -178,3 +178,202 @@ Get your free API key
 Update in app.py:
 
 WEATHER_API_KEY = "7c1b56b88375d9d8e05aa07d8506500d"
+
+Step 5: Run the Application
+python app.py
+
+Step 6: Access the Application
+Open your browser and navigate to:
+http://localhost:5000
+
+🚀 Usage Guide
+1. Crop Yield Prediction
+Navigate to Yield Predictor page
+
+Enter your location or use Fetch Live Weather
+
+Select crop type, soil type, and season
+
+Enter temperature, humidity, rainfall
+
+Click Predict Yield
+
+View 3D gauge visualization and multi-year forecast
+
+2. Crop Recommendation
+Go to Crop Advisor page
+
+Enter location or fetch weather data
+
+Input temperature, humidity, rainfall
+
+Select soil type
+
+Get top 3 crop recommendations with confidence scores
+
+3. Profit Calculator
+Navigate to Profit Analyzer
+
+Select crop type
+
+Enter expected yield, market price, production cost
+
+Get profit analysis with margin percentage
+
+4. Seed & Fertilizer
+Go to Seed & Fertilizer page
+
+Select crop and soil type
+
+Enter farm area in acres
+
+Get seed varieties, rates, and fertilizer recommendations
+
+5. Weather-Based Tasks
+View daily farming tasks based on current weather
+
+Check weekly schedule for seasonal activities
+
+Mark tasks as complete
+
+6. Government Schemes
+Browse available schemes (PM-KISAN, Soil Health Card, etc.)
+
+Click Apply to visit official government websites
+
+View helpline numbers for assistance
+
+7. PDF Reports
+Fill farmer details (name, location, crop, yield, fertilizer)
+
+Click Download PDF Report
+
+Professional report generates and downloads automatically
+
+8. AI Chatbot
+Ask farming-related questions
+
+Get instant responses about crops, fertilizers, pests
+
+Use voice input for hands-free interaction
+
+9. Interactive Map
+Click on state markers
+
+View detailed farming information for each state
+
+Get crop recommendations and yield data
+
+🔌 API Endpoints
+Endpoint	Method	Description	Request Body
+/api/predict	POST	Predict crop yield	{crop_type, location, rainfall, temperature, soil_type, season, humidity}
+/api/recommend	POST	Get crop recommendations	{temperature, rainfall, humidity, soil_type}
+/api/profit	POST	Calculate profit	{crop_type, yield_amount, market_price, production_cost}
+/api/weather	GET	Fetch live weather	Query param: ?city=city_name
+/api/chatbot	POST	AI assistant response	{message}
+/api/auth	POST	User login/signup	{email, password}
+/api/user/history	GET	Get prediction history	Query param: ?user_id=id
+/api/analytics/data	GET	Get chart data	-
+📸 Screenshots
+Dashboard Home
+https://screenshots/dashboard.png
+
+Yield Prediction
+https://screenshots/prediction.png
+
+Crop Recommendation
+https://screenshots/recommendation.png
+
+Analytics Dashboard
+https://screenshots/analytics.png
+
+Government Schemes
+https://screenshots/schemes.png
+
+PDF Report
+https://screenshots/pdf.png
+
+🔮 Future Enhancements
+Disease Detection - Upload crop images for disease identification
+
+Market Price Integration - Live mandi prices from government APIs
+
+Weather Alerts (SMS/Email) - Push notifications for extreme weather
+
+Farmer Forum - Community discussion and knowledge sharing
+
+Expert Consultation - Video call with agriculture experts
+
+Expense Tracker - Log and analyze farming expenses
+
+Crop Rotation Planner - AI-powered rotation suggestions
+
+Drone Integration - Aerial crop health monitoring
+
+Mobile App - React Native / Flutter version
+
+Multi-language Expansion - Marathi, Telugu, Tamil, Bengali
+
+🤝 Contributing
+Contributions are welcome! Please follow these steps:
+
+Fork the repository
+
+Create a feature branch (git checkout -b feature/AmazingFeature)
+
+Commit changes (git commit -m 'Add AmazingFeature')
+
+Push to branch (git push origin feature/AmazingFeature)
+
+Open a Pull Request
+
+Development Guidelines
+Follow PEP 8 for Python code
+
+Use semantic HTML5 elements
+
+Write clean, commented code
+
+Test before submitting PR
+
+📄 License
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+text
+MIT License
+
+Copyright (c) 2024 FarmAI
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files...
+🙏 Acknowledgments
+OpenWeatherMap - For free weather API
+
+Leaflet.js - For interactive mapping
+
+Chart.js - For beautiful data visualization
+
+Scikit-learn - For ML algorithms
+
+Flask - For lightweight backend framework
+
+📞 Contact
+Project Maintainer: Jayrajsinh Chudasama
+
+📧 Email: jayrajsinhc831@gmail.com
+
+🐙 GitHub: @jayrajsinh33
+
+💼 LinkedIn: Jayrajsinh Chudasama
+
+Project Links
+🔗 Live Demo: http://localhost:5000
+
+📂 Repository: https://github.com/yourusername/smart-farming-assistant
+
+⭐ Show Your Support
+If you found this project helpful, please give it a ⭐ on GitHub!
+
+Built with ❤️ for Indian Farmers | Smart Agriculture for Better Tomorrow
+
+“Empowering Farmers with AI, One Prediction at a Time” 🌾
