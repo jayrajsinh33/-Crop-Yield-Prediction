@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>FarmAI - Complete Agricultural Intelligence System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0a2f4a 0%, #0a1f2a 100%);
+            color: #ffffff;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        .weather-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .weather-sky {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a3a5a 0%, #0a2a3a 100%);
+        }
+
+        .sun-glow {
+            position: absolute;
+            top: 10%;
+            right: 10%;
+            width: 150px;
+            height: 150px;
+            background: radial-gradient(circle, rgba(255, 200, 50, 0.8), rgba(255, 150, 0, 0.3), transparent);
+            border-radius: 50%;
+            animation: sunPulse 3s ease-in-out infinite;
+        }
+
+        @keyframes sunPulse {
+            0%, 100% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.1); opacity: 1; }
+        }
+
+        .sun {
+            position: absolute;
+            top: 10%;
+            right: 10%;
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle, #ffdd88, #ffaa33);
+            border-radius: 50%;
+            box-shadow: 0 0 50px rgba(255, 200, 0, 0.8);
+            animation: sunGlow 2s ease-in-out infinite;
+        }
+
+        @keyframes sunGlow {
+            0%, 100% { box-shadow: 0 0 30px rgba(255, 200, 0, 0.8); }
+            50% { box-shadow: 0 0 60px rgba(255, 200, 0, 1); }
+        }
+
+        .moon {
+            position: absolute;
+            top: 10%;
+            left: 10%;
+            width: 70px;
+            height: 70px;
+            background: radial-gradient(circle, #ddddff, #aaaacc);
+            border-radius: 50%;
+            box-shadow: 0 0 30px rgba(200, 200, 255, 0.6);
+            display: none;
+        }
+
+        .cloud {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 100px;
+            animation: cloudFloat 20s linear infinite;
+        }
+
+        @keyframes cloudFloat {
+            from { transform: translateX(-100%); }
+            to { transform: translateX(100vw); }
+        }
+
+        .rain-drop {
+            position: absolute;
+            width: 2px;
+            height: 10px;
+            background: linear-gradient(transparent, #88aaff);
+            animation: rainFall 0.5s linear infinite;
+        }
+
+        @keyframes rainFall {
+            from { transform: translateY(-100px); opacity: 1; }
+            to { transform: translateY(100vh); opacity: 0; }
+        }
+
+        .app-wrapper {
+            display: flex;
+            position: relative;
+            z-index: 10;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 280px;
+            height: 100vh;
+            background: rgba(10, 25, 47, 0.98);
+            backdrop-filter: blur(15px);
+            border-right: 1px solid rgba(255, 215, 0, 0.3);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 100;
+            overflow-y: auto;
+            transform: translateX(0);
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(-280px);
+        }
+
+        /* FIXED: Toggle button - moved to right side of sidebar */
+        .sidebar-toggle {
+            position: fixed;
+            left: 290px;
+            top: 20px;
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, #ffd700, #ffc857);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 101;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+        }
+
+        .sidebar.collapsed + .sidebar-toggle {
+            left: 20px;
+        }
+
+        .sidebar-toggle i {
+            color: #0a192f;
+            font-size: 20px;
+        }
+
+        /* FIXED: Main content with padding top to avoid overlap */
+        .main-content {
+            margin-left: 280px;
+            padding: 20px;
+            padding-top: 80px;
+            width: calc(100% - 280px);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .sidebar.collapsed ~ .main-content {
+            margin-left: 0;
+            width: 100%;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            margin: 5px 15px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: rgba(255, 255, 255, 0.85);
+            gap: 15px;
+        }
+
+        .nav-item i {
+            width: 28px;
+            font-size: 18px;
+            flex-shrink: 0;
+            text-align: center;
+        }
+
+        .nav-item span {
+            flex: 1;
+            white-space: nowrap;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 215, 0, 0.15);
+            color: #ffd700;
+            transform: translateX(5px);
+        }
+
+        .nav-item.active {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 200, 87, 0.1));
+            color: #ffd700;
+            border-left: 3px solid #ffd700;
+        }
+
+        .logo {
+            padding: 30px 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+        }
+
+        .logo-icon {
+            width: 70px;
+            height: 70px;
+            margin: 0 auto 15px;
+            background: linear-gradient(135deg, #ffd700, #ffc857);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+
+        .logo-icon i {
+            font-size: 35px;
+            color: #0a192f;
+        }
+
+        .logo h2 {
+            background: linear-gradient(135deg, #ffd700, #ffc857);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 26px;
+        }
+
+        .page {
+            display: none;
+            animation: fadeInUp 0.5s ease;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .weather-card {
+            background: rgba(27, 42, 65, 0.6);
+            backdrop-filter: blur(20px);
+            border-radius: 30px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(255, 215, 0, 0.2);
+        }
+
+        .weather-main {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .weather-temp {
+            font-size: 64px;
+            font-weight: 800;
+            color: #ffd700;
+        }
+
+        .weather-icon {
+            font-size: 80px;
+            color: #ffd700;
+            filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.5));
+        }
+
+        .weather-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .weather-detail {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 12px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .glass-card {
+            background: rgba(27, 42, 65, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            padding: 20px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.2);
+            border-color: rgba(255, 215, 0, 0.5);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: rgba(27, 42, 65, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: #ffd700;
+        }
+
+        .stat-icon {
+            font-size: 40px;
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 800;
+            color: #ffd700;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .btn-gold {
+            background: linear-gradient(135deg, #ffd700, #ffc857);
+            color: #0a192f;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .btn-gold:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(255, 215, 0, 0.4);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #ffd700;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 12px;
+            color: #ffffff;
+            font-size: 14px;
+        }
+
+        .prediction-layout, .recommendation-layout, .profit-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        .yield-meter {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .gauge-number {
+            font-size: 48px;
+            font-weight: 800;
+            color: #ffd700;
+        }
+
+        .crop-card {
+            background: rgba(27, 42, 65, 0.7);
+            border-radius: 16px;
+            padding: 15px;
+            margin-bottom: 12px;
+            border-left: 3px solid #ffd700;
+        }
+
+        .map-container {
+            height: 450px;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .chat-container {
+            height: 500px;
+            display: flex;
+            flex-direction: column;
+            background: rgba(27, 42, 65, 0.7);
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+        }
+
+        .message.bot { justify-content: flex-start; }
+        .message.user { justify-content: flex-end; }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 18px;
+            border-radius: 18px;
+            background: rgba(255, 215, 0, 0.15);
+            color: #ffffff;
+        }
+
+        .message.user .message-content {
+            background: #ffd700;
+            color: #0a192f;
+        }
+
+        .chat-input-container {
+            display: flex;
+            gap: 12px;
+            padding: 20px;
+            border-top: 1px solid rgba(255, 215, 0, 0.2);
+            align-items: center;
+        }
+
+        .chat-input-container input {
+            flex: 1;
+            padding: 14px 16px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 15px;
+            height: 48px;
+        }
+
+        .chat-input-container button {
+            width: auto;
+            padding: 12px 28px;
+            height: 48px;
+            white-space: nowrap;
+        }
+
+        .language-selector {
+            display: flex;
+            gap: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            border-top: 1px solid rgba(255, 215, 0, 0.2);
+        }
+
+        .lang-btn {
+            flex: 1;
+            padding: 8px;
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .lang-btn.active {
+            background: #ffd700;
+            color: #0a192f;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(15px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #112240, #1b2a41);
+            border-radius: 30px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+        }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            margin: 8px 0;
+            background: rgba(255, 215, 0, 0.1);
+            border-radius: 12px;
+        }
+
+        .task-checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .scheme-card {
+            background: rgba(255, 215, 0, 0.1);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 3px solid #ffd700;
+            transition: all 0.3s ease;
+        }
+
+        .scheme-card:hover {
+            background: rgba(255, 215, 0, 0.2);
+            transform: translateX(5px);
+        }
+
+        .scheme-card h4 {
+            color: #ffd700;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .scheme-card p {
+            margin: 5px 0;
+            color: #ccc;
+        }
+
+        .chart-container {
+            background: rgba(27, 42, 65, 0.7);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        canvas {
+            max-height: 300px;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-280px);
+            }
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+            .prediction-layout, .recommendation-layout, .profit-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #112240;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ffd700;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="weather-bg" id="weatherBg">
+        <div class="weather-sky"></div>
+        <div class="sun-glow"></div>
+        <div class="sun" id="sunElement"></div>
+        <div class="moon" id="moonElement"></div>
+        <div id="cloudContainer"></div>
+        <div id="rainContainer"></div>
+    </div>
+
+    <div class="app-wrapper">
+        <div class="sidebar" id="sidebar">
+            <div class="logo">
+                <div class="logo-icon"><i class="fas fa-leaf"></i></div>
+                <h2 class="i18n" data-key="app_name">FarmAI</h2>
+                <p class="i18n" data-key="tagline" style="font-size: 11px;">Smart Agriculture</p>
+            </div>
+            <div class="nav-item active" data-page="home"><i class="fas fa-home"></i> <span class="i18n" data-key="nav_home">Dashboard</span></div>
+            <div class="nav-item" data-page="prediction"><i class="fas fa-chart-line"></i> <span class="i18n" data-key="nav_predict">Yield Predictor</span></div>
+            <div class="nav-item" data-page="recommendation"><i class="fas fa-seedling"></i> <span class="i18n" data-key="nav_recommend">Crop Advisor</span></div>
+            <div class="nav-item" data-page="profit"><i class="fas fa-coins"></i> <span class="i18n" data-key="nav_profit">Profit Analyzer</span></div>
+            <div class="nav-item" data-page="seed-fertilizer"><i class="fas fa-flask"></i> <span class="i18n" data-key="nav_seed">Seed & Fertilizer</span></div>
+            <div class="nav-item" data-page="weather-tasks"><i class="fas fa-tasks"></i> <span class="i18n" data-key="nav_tasks">Weather Tasks</span></div>
+            <div class="nav-item" data-page="water-management"><i class="fas fa-tint"></i> <span class="i18n" data-key="nav_water">Water Management</span></div>
+            <div class="nav-item" data-page="government-schemes"><i class="fas fa-landmark"></i> <span class="i18n" data-key="nav_schemes">Govt Schemes</span></div>
+            <div class="nav-item" data-page="reports"><i class="fas fa-file-pdf"></i> <span class="i18n" data-key="nav_reports">PDF Reports</span></div>
+            <div class="nav-item" data-page="analytics"><i class="fas fa-chart-pie"></i> <span class="i18n" data-key="nav_analytics">Analytics Hub</span></div>
+            <div class="nav-item" data-page="map"><i class="fas fa-map-marked-alt"></i> <span class="i18n" data-key="nav_map">India Map</span></div>
+            <div class="nav-item" data-page="chatbot"><i class="fas fa-robot"></i> <span class="i18n" data-key="nav_chatbot">AI Assistant</span></div>
+            <div class="nav-item" data-page="profile"><i class="fas fa-user"></i> <span class="i18n" data-key="nav_profile">My Farm</span></div>
+            <div class="language-selector">
+                <button class="lang-btn active" data-lang="en">🇬🇧 EN</button>
+                <button class="lang-btn" data-lang="hi">🇮🇳 हिंदी</button>
+                <button class="lang-btn" data-lang="gu">🇮🇳 ગુજરાતી</button>
+            </div>
+        </div>
+
+        <div class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></div>
+
+        <div class="main-content">
+            <!-- Home Page -->
+            <div id="home-page" class="page active">
+                <div class="weather-card">
+                    <div class="weather-main">
+                        <div>
+                            <h2 style="font-size: 28px; color: #ffd700;" class="i18n" data-key="greeting" id="greetingText">Good Morning, Farmer!</h2>
+                            <p id="currentDate"></p>
+                            <div class="weather-temp" id="currentTemp">--°C</div>
+                            <p id="weatherCondition">Loading weather...</p>
+                        </div>
+                        <div class="weather-icon" id="weatherIcon"><i class="fas fa-cloud-sun"></i></div>
+                    </div>
+                    <div class="weather-details" id="weatherDetails"></div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card" onclick="showTip('farmer')">
+                        <div class="stat-icon"><i class="fas fa-user-farmer"></i></div>
+                        <div class="stat-value" id="totalFarmers">1</div>
+                        <div class="i18n" data-key="active_farmers">Active Farmer</div>
+                    </div>
+                    <div class="stat-card" onclick="showTip('yield')">
+                        <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+                        <div class="stat-value" id="avgYield">3,850</div>
+                        <div class="i18n" data-key="avg_yield">Avg Yield (kg/ha)</div>
+                    </div>
+                    <div class="stat-card" onclick="showTip('profit')">
+                        <div class="stat-icon"><i class="fas fa-hand-holding-usd"></i></div>
+                        <div class="stat-value" id="avgProfit">₹32,500</div>
+                        <div class="i18n" data-key="avg_profit">Avg Profit/Ha</div>
+                    </div>
+                </div>
+
+                <div class="features-grid">
+                    <div class="glass-card" onclick="navigateTo('seed-fertilizer')"><i class="fas fa-flask" style="font-size: 32px; color: #ffd700;"></i><h3 class="i18n" data-key="seed_title">🌱 Seed & Fertilizer</h3><p class="i18n" data-key="seed_desc">AI-powered recommendations</p></div>
+                    <div class="glass-card" onclick="navigateTo('weather-tasks')"><i class="fas fa-tasks" style="font-size: 32px; color: #ffd700;"></i><h3 class="i18n" data-key="tasks_title">📝 Weather Tasks</h3><p class="i18n" data-key="tasks_desc">Daily tasks based on weather</p></div>
+                    <div class="glass-card" onclick="navigateTo('water-management')"><i class="fas fa-tint" style="font-size: 32px; color: #ffd700;"></i><h3 class="i18n" data-key="water_title">💧 Water Management</h3><p class="i18n" data-key="water_desc">Smart irrigation advice</p></div>
+                    <div class="glass-card" onclick="navigateTo('government-schemes')"><i class="fas fa-landmark" style="font-size: 32px; color: #ffd700;"></i><h3 class="i18n" data-key="schemes_title">📋 Govt Schemes</h3><p class="i18n" data-key="schemes_desc">Subsidies & benefits</p></div>
+                    <div class="glass-card" onclick="navigateTo('reports')"><i class="fas fa-file-pdf" style="font-size: 32px; color: #ffd700;"></i><h3 class="i18n" data-key="reports_title">📄 PDF Reports</h3><p class="i18n" data-key="reports_desc">Generate farm reports</p></div>
+                </div>
+            </div>
+
+            <!-- Yield Prediction Page -->
+            <div id="prediction-page" class="page">
+                <h2 style="margin-bottom: 20px; color: #ffd700;" class="i18n" data-key="predict_title"><i class="fas fa-chart-line"></i> 3D Yield Predictor</h2>
+                <div class="prediction-layout">
+                    <div class="glass-card">
+                        <form id="prediction-form">
+                            <div class="form-group"><label class="i18n" data-key="location">📍 Location</label><input type="text" id="city" placeholder="Enter city name"><button type="button" id="fetch-weather" class="btn-gold" style="margin-top: 10px;">🌤️ Fetch Live Weather</button></div>
+                            <div class="form-group"><label class="i18n" data-key="crop_type">🌱 Crop Type</label><select id="crop-type"><option>Rice</option><option>Wheat</option><option>Maize</option><option>Cotton</option><option>Sugarcane</option></select></div>
+                            <div class="form-group"><label class="i18n" data-key="soil_type">🏔️ Soil Type</label><select id="soil-type"><option>Clay</option><option>Loamy</option><option>Sandy</option><option>Black</option></select></div>
+                            <div class="form-group"><label class="i18n" data-key="season">📅 Season</label><select id="season"><option value="Kharif">🌧️ Kharif (Monsoon)</option><option value="Rabi">❄️ Rabi (Winter)</option><option value="Zaid">☀️ Zaid (Summer)</option></select></div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;"><div class="form-group"><label class="i18n" data-key="temperature">🌡️ Temp (°C)</label><input type="number" id="temperature" step="0.1"></div><div class="form-group"><label class="i18n" data-key="humidity">💧 Humidity (%)</label><input type="number" id="humidity" step="0.1"></div></div>
+                            <div class="form-group"><label class="i18n" data-key="rainfall">☔ Rainfall (mm)</label><input type="number" id="rainfall" step="0.1"></div>
+                            <button type="submit" class="btn-gold">🚀 Predict Yield</button>
+                        </form>
+                    </div>
+                    <div id="prediction-result" style="display: none;">
+                        <div class="glass-card" style="text-align: center;">
+                            <h3 style="color: #ffd700;" class="i18n" data-key="result_title">🎯 Yield Prediction</h3>
+                            <div class="yield-meter"><canvas id="yieldGauge" width="200" height="200"></canvas><div class="gauge-number" id="yield-value">0</div><div class="i18n" data-key="kg_per_ha">kg/hectare</div></div>
+                            <div style="margin-top: 20px; padding: 15px; background: rgba(255,215,0,0.1); border-radius: 15px;"><h4 class="i18n" data-key="forecast_title">📈 Multi-Year Forecast</h4><div id="forecast"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Crop Recommendation Page -->
+            <div id="recommendation-page" class="page">
+                <h2 style="margin-bottom: 20px; color: #ffd700;" class="i18n" data-key="rec_title"><i class="fas fa-seedling"></i> Smart Crop Advisor</h2>
+                <div class="recommendation-layout">
+                    <div class="glass-card">
+                        <form id="recommendation-form">
+                            <div class="form-group"><label class="i18n" data-key="location">📍 Location</label><input type="text" id="rec-city" placeholder="Enter city"><button type="button" id="rec-fetch-weather" class="btn-gold" style="margin-top: 10px;">Get Weather Data</button></div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;"><div class="form-group"><label class="i18n" data-key="temperature">🌡️ Temp (°C)</label><input type="number" id="rec-temperature" step="0.1"></div><div class="form-group"><label class="i18n" data-key="humidity">💧 Humidity (%)</label><input type="number" id="rec-humidity" step="0.1"></div></div>
+                            <div class="form-group"><label class="i18n" data-key="rainfall">☔ Rainfall (mm)</label><input type="number" id="rec-rainfall" step="0.1"></div>
+                            <div class="form-group"><label class="i18n" data-key="soil_type">🏔️ Soil Type</label><select id="rec-soil"><option>Clay</option><option>Loamy</option><option>Sandy</option><option>Black</option></select></div>
+                            <button type="submit" class="btn-gold">✨ Get Recommendations</button>
+                        </form>
+                    </div>
+                    <div id="recommendation-result" style="display: none;"><div id="crop-list"></div></div>
+                </div>
+            </div>
+
+            <!-- Profit Page -->
+            <div id="profit-page" class="page">
+                <h2 style="margin-bottom: 20px; color: #ffd700;" class="i18n" data-key="profit_title"><i class="fas fa-coins"></i> Profit Analyzer</h2>
+                <div class="profit-layout">
+                    <div class="glass-card">
+                        <form id="profit-form">
+                            <div class="form-group"><label class="i18n" data-key="crop_type">🌱 Crop Type</label><select id="profit-crop"><option>Rice</option><option>Wheat</option><option>Maize</option><option>Cotton</option></select></div>
+                            <div class="form-group"><label class="i18n" data-key="expected_yield">📊 Expected Yield (kg/ha)</label><input type="number" id="yield-input" step="0.1"></div>
+                            <div class="form-group"><label class="i18n" data-key="market_price">💰 Market Price (₹/kg)</label><input type="number" id="market-price" step="0.1"></div>
+                            <div class="form-group"><label class="i18n" data-key="production_cost">💸 Production Cost (₹/ha)</label><input type="number" id="cost-input" step="0.1"></div>
+                            <button type="submit" class="btn-gold">💰 Calculate Profit</button>
+                        </form>
+                    </div>
+                    <div id="profit-result" style="display: none;"><div class="glass-card" style="text-align: center;"><i class="fas fa-chart-line" style="font-size: 48px; color: #ffd700;"></i><h2 class="i18n" data-key="profit_analysis">Profit Analysis</h2><div style="font-size: 48px; font-weight: 800; color: #ffd700;" id="profit-value">₹0</div><div id="profit-breakdown"></div></div></div>
+                </div>
+            </div>
+
+            <!-- Seed & Fertilizer Page -->
+            <div id="seed-fertilizer-page" class="page">
+                <h2 style="margin-bottom: 20px; color: #ffd700;" class="i18n" data-key="seed_page_title"><i class="fas fa-flask"></i> Seed & Fertilizer Recommendations</h2>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px;">
+                    <div class="glass-card"><h3 style="color: #ffd700;" class="i18n" data-key="select_crop_soil">Select Crop & Soil</h3>
+                        <div class="form-group"><label class="i18n" data-key="crop_type">Crop Type</label><select id="rec-crop"><option>Rice</option><option>Wheat</option><option>Maize</option><option>Cotton</option><option>Sugarcane</option></select></div>
+                        <div class="form-group"><label class="i18n" data-key="soil_type">Soil Type</label><select id="rec-soil-type"><option>Clay</option><option>Loamy</option><option>Sandy</option><option>Black</option></select></div>
+                        <div class="form-group"><label class="i18n" data-key="farm_area">Farm Area (acres)</label><input type="number" id="farm-area" value="1"></div>
+                        <button onclick="getSeedFertilizerRecommendations()" class="btn-gold">Get Recommendations</button>
+                    </div>
+                    <div id="seed-fertilizer-result" class="glass-card"><h3 style="color: #ffd700;" class="i18n" data-key="recommendations">📋 Recommendations</h3><div id="seed-recommendation"></div><div id="fertilizer-recommendation"></div></div>
+                </div>
+            </div>
+
+            <!-- Weather Tasks Page -->
+            <div id="weather-tasks-page" class="page">
+                <h2 style="margin-bottom: 20px; color: #ffd700;" class="i18n" data-key="tasks_page_title"><i class="fas fa-tasks"></i> Weather-Based Farming Tasks</h2>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px;">
+                    <div class="glass-card"><h3 style="color: #ffd700;" class="i18n" data-key="today_tasks">🌤️ Today's Tasks</h3><div id="today-tasks"></div><button onclick="refreshTasks()" class="btn-gold" style="margin-top: 15px;">Refresh Tasks</button></div>
+                    <div class="glass-card"><h3 style="color: #ffd700;" class="i18n" data-key="weekly_schedule">📅 Weekly Schedule</h3><div id="weekly-tasks"></div></div>
+                </div>
+            </div>
+
+            <!-- Water Management Page -->
+            <div id="water-management-page" class="page">
+                <h2 style="margin-bottom: 20px; color: #ffd700;" class="i18n" data-key="water_page_title"><i class="fas fa-tint"></i> Smart Water Management</h2>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px;">
+                    <div class="glass-card"><h3 style="color: #ffd700;" class="i18n" data-key="irrigation_calc">💧 Irrigation Calculator</h3>
+                        <div class="form-group"><label class="i18n" data-key="crop_type">Crop Type</label><select id="water-crop"><option>Rice</option><option>Wheat</option><option>Maize</option><option>Cotton</option></select></div>
+                        <div class="form-group"><label class="i18n" data-key="farm_area">Area (acres)</label><input type="number" id="water-area" value="1"></div>
+                        <button onclick="calculateWaterRequirement()" class="btn-gold">Calculate Water Need</button>
+                        <div id="water-result" style="margin-top: 20px;"></div>
+                    </div>
+                    <div class="glass-card"><h3 style="color: #ffd700;" class="i18n" data-key="water_tips_title">💡 Water Saving Tips</h3><div id="water-tips"></div></div>
+                </div>
+            </div>
+
+            <!-- Government Schemes Page -->
+            <div id="government-schemes-page" class="page">
+                <h2 style="margin-bottom: 20px; color: #ffd700;" class="i18n" data-key="schemes_page_title"><i class="fas fa-landmark"></i> Government Schemes & Subsidies</h2>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px;">
+                    <div class="glass-card"><h3 style="color: #ffd700;" class="i18n" data-key="available_schemes">📋 Available Schemes</h3>
+                        <div class="scheme-card"><h4>🌾 PM-KISAN</h4><p><strong class="i18n" data-key="benefit">💰 Benefit:</strong> ₹6,000/year</p><p><strong class="i18n" data-key="eligibility">👤 Eligibility:</strong> All small and marginal farmers</p><button class="btn-gold" style="margin-top: 10px;" onclick="window.open('https://pmkisan.gov.in', '_blank')">🔗 Apply on PM-KISAN Website</button></div>
+                        <div class="scheme-card"><h4>🧪 Soil Health Card Scheme</h4><p><strong class="i18n" data-key="benefit">💰 Benefit:</strong> Free soil testing</p><p><strong class="i18n" data-key="eligibility">👤 Eligibility:</strong> All farmers</p><button class="btn-gold" style="margin-top: 10px;" onclick="window.open('https://soilhealth.dac.gov.in', '_blank')">🔗 Apply on Soil Health Website</button></div>
+                        <div class="scheme-card"><h4>🌾 PM Fasal Bima Yojana</h4><p><strong class="i18n" data-key="benefit">💰 Benefit:</strong> Crop insurance at low premium</p><p><strong class="i18n" data-key="eligibility">👤 Eligibility:</strong> All farmers</p><button class="btn-gold" style="margin-top: 10px;" onclick="window.open('https://pmfby.gov.in', '_blank')">🔗 Apply on PMFBY Website</button></div>
+                        <div class="scheme-card"><h4>💳 Kisan Credit Card</h4><p><strong class="i18n" data-key="benefit">💰 Benefit:</strong> Low interest loans up to ₹3 lakh</p><p><strong class="i18n" data-key="eligibility">👤 Eligibility:</strong> Farmers with land</p><button class="btn-gold" style="margin-top: 10px;" onclick="window.open('https://www.agricoop.nic.in', '_blank')">🔗 Apply on KCC Website</button></div>
+                        <div class="scheme-card"><h4>💧 Micro Irrigation Subsidy</h4><p><strong class="i18n" data-key="benefit">💰 Benefit:</strong> 50-80% subsidy on drip/sprinkler</p><p><strong class="i18n" data-key="eligibility">👤 Eligibility:</strong> All farmers</p><button class="btn-gold" style="margin-top: 10px;" onclick="window.open('https://pmksy.gov.in', '_blank')">🔗 Apply on PMKSY Website</button></div>
+                    </div>
+                    <div class="glass-card"><h3 style="color: #ffd700;" class="i18n" data-key="scheme_info">📝 Scheme Information</h3>
+                        <div style="margin-top: 15px;"><p style="color: #ffd700;" class="i18n" data-key="scheme_instruction">✨ Click on any "Apply" button above to visit the official government website and apply directly.</p>
+                        <div style="background: rgba(255,215,0,0.1); padding: 15px; border-radius: 12px; margin-top: 15px;"><h4 style="color: #ffd700;" class="i18n" data-key="helpline">📞 Helpline Numbers:</h4><p>PM-KISAN: 155261 / 011-23381092</p><p>PMFBY: 1800-180-1551</p><p>KCC: 1800-180-2222</p><p>Soil Health: 1800-180-1551</p></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PDF Reports Page -->
+            <div id="reports-page" class="page">
+                <h2 style="margin-bottom: 20px; color: #ffd700;" class="i18n" data-key="reports_page_title"><i class="fas fa-file-pdf"></i> Generate PDF Reports</h2>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px;">
+                    <div class="glass-card"><h3 style="color: #ffd700;" class="i18n" data-key="farm_report">📊 Farm Report</h3>
+                        <div class="form-group"><label class="i18n" data-key="farmer_name">👨‍🌾 Farmer Name</label><input type="text" id="report-name" placeholder="Enter farmer name" value="jayraj"></div>
+                        <div class="form-group"><label class="i18n" data-key="farm_location">📍 Farm Location</label><input type="text" id="report-location" placeholder="Enter location" value="ahmedabad"></div>
+                        <div class="form-group"><label class="i18n" data-key="crop_grown">🌾 Crop Grown</label><input type="text" id="report-crop" placeholder="Crop type" value="rice"></div>
+                        <div class="form-group"><label class="i18n" data-key="yield_kg">📊 Yield (kg/ha)</label><input type="number" id="report-yield" placeholder="Yield" value="50"></div>
+                        <div class="form-group"><label class="i18n" data-key="fertilizer_used">🧪 Fertilizer Used</label><input type="text" id="report-fertilizer" placeholder="Fertilizer type" value="NPK"></div>
+                        <button onclick="generatePDFReport()" class="btn-gold" id="pdfDownloadBtn"><i class="fas fa-download"></i> Download PDF Report</button>
+                    </div>
+                    <div class="glass-card"><h3 style="color: #ffd700;" class="i18n" data-key="preview_title">📄 Report Preview</h3>
+                        <div id="preview-content" style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; min-height: 350px;"><p style="color: #ccc; text-align: center;" class="i18n" data-key="preview_msg">Fill the form and click<br>"Download PDF Report"<br>to generate your farm report</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics Page -->
+            <div id="analytics-page" class="page"><h2 style="margin-bottom: 20px; color: #ffd700;" class="i18n" data-key="analytics_title"><i class="fas fa-chart-pie"></i> Analytics Hub</h2><div class="chart-container"><canvas id="rainfallChart"></canvas></div><div class="chart-container"><canvas id="cropChart"></canvas></div><div class="chart-container"><canvas id="seasonalChart"></canvas></div></div>
+
+            <!-- Map Page -->
+            <div id="map-page" class="page"><h2 style="margin-bottom: 20px; color: #ffd700;" class="i18n" data-key="map_title"><i class="fas fa-map-marked-alt"></i> India Farm Map</h2><div class="map-container"><div id="indiaMap" style="height: 450px; width: 100%; border-radius: 20px;"></div></div><div id="mapInfo" class="glass-card" style="margin-top: 20px;"><p class="i18n" data-key="map_instruction">Click on any state marker to see detailed farming information</p></div></div>
+
+            <!-- Chatbot Page -->
+            <div id="chatbot-page" class="page"><h2 style="margin-bottom: 20px; color: #ffd700;" class="i18n" data-key="chat_title"><i class="fas fa-robot"></i> AI Farming Assistant</h2><div class="chat-container"><div class="chat-messages" id="chat-messages"><div class="message bot"><div class="message-content">🌾 Hello! I'm FarmAI, your agricultural assistant. Ask me about crops, farming techniques, pest control, or anything farming-related!</div></div></div><div class="chat-input-container"><input type="text" id="chat-input" placeholder="Ask me anything about farming..."><button id="send-message" class="btn-gold">Send</button></div></div></div>
+
+            <!-- Profile Page -->
+            <div id="profile-page" class="page"><h2 style="margin-bottom: 20px; color: #ffd700;" class="i18n" data-key="profile_title"><i class="fas fa-user"></i> My Farm Profile</h2><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px;"><div class="glass-card"><div id="auth-section"><h3 style="color: #ffd700;" class="i18n" data-key="account_access">👤 Account Access</h3><div id="userInfo" style="margin: 20px 0;"></div><button id="showLoginBtn" class="btn-gold">Login / Sign Up</button></div></div><div id="history-section" style="display: none;" class="glass-card"><h3 style="color: #ffd700;" class="i18n" data-key="prediction_history">📜 Prediction History</h3><div id="history-list"></div></div></div></div>
+        </div>
+    </div>
+
+    <div id="tipModal" class="modal"><div class="modal-content"><h2 id="tipTitle" style="color: #ffd700;">🌱 Farming Tip</h2><p id="tipContent" style="margin: 20px 0;"></p><button onclick="closeModal('tipModal')" class="btn-gold">Close</button></div></div>
+    <div id="authModal" class="modal"><div class="modal-content"><h2 style="color: #ffd700;" class="i18n" data-key="farmai_access">FarmAI Access</h2><input type="email" id="modalEmail" placeholder="Email"><input type="password" id="modalPassword" placeholder="Password"><button id="modalLoginBtn" class="btn-gold">Login / Sign Up</button><button onclick="closeModal('authModal')" style="margin-top:10px; background:none; border:none; color:#fff;">Close</button></div></div>
+
+    <script>
+                // ==================== TIME-BASED GREETING - FIXED ====================
+        function updateGreeting() {
+            const hour = new Date().getHours();
+            const greetingElement = document.getElementById('greetingText');
+            let greeting = '';
+            
+            if (hour >= 5 && hour < 12) {
+                greeting = 'Good Morning, Farmer! 🌅';
+            } else if (hour >= 12 && hour < 17) {
+                greeting = 'Good Afternoon, Farmer! ☀️';
+            } else if (hour >= 17 && hour < 21) {
+                greeting = 'Good Evening, Farmer! 🌙';
+            } else {
+                greeting = 'Good Night, Farmer! 🌟';
+            }
+            
+            if (greetingElement) {
+                greetingElement.innerHTML = greeting;
+            }
+            
+            console.log('Current hour:', hour, 'Greeting:', greeting);
+        }
+
+        // ==================== COMPLETE TRANSLATIONS ====================
+        const translations = {
+            en: {
+                app_name: "FarmAI", tagline: "Smart Agriculture",
+                nav_home: "Dashboard", nav_predict: "Yield Predictor", nav_recommend: "Crop Advisor", nav_profit: "Profit Analyzer",
+                nav_seed: "Seed & Fertilizer", nav_tasks: "Weather Tasks", nav_water: "Water Management", nav_schemes: "Govt Schemes",
+                nav_reports: "PDF Reports", nav_analytics: "Analytics Hub", nav_map: "India Map", nav_chatbot: "AI Assistant", nav_profile: "My Farm",
+                greeting: "Good Morning, Farmer!", active_farmers: "Active Farmer", avg_yield: "Avg Yield (kg/ha)", avg_profit: "Avg Profit/Ha",
+                seed_title: "🌱 Seed & Fertilizer", seed_desc: "AI-powered recommendations",
+                tasks_title: "📝 Weather Tasks", tasks_desc: "Daily tasks based on weather",
+                water_title: "💧 Water Management", water_desc: "Smart irrigation advice",
+                schemes_title: "📋 Govt Schemes", schemes_desc: "Subsidies & benefits",
+                reports_title: "📄 PDF Reports", reports_desc: "Generate farm reports",
+                predict_title: "3D Yield Predictor", location: "📍 Location", crop_type: "🌱 Crop Type", soil_type: "🏔️ Soil Type",
+                season: "📅 Season", temperature: "🌡️ Temp (°C)", humidity: "💧 Humidity (%)", rainfall: "☔ Rainfall (mm)",
+                fetch_weather: "🌤️ Fetch Live Weather", predict_btn: "🚀 Predict Yield", result_title: "🎯 Yield Prediction",
+                kg_per_ha: "kg/hectare", forecast_title: "📈 Multi-Year Forecast", rec_title: "Smart Crop Advisor",
+                get_weather: "Get Weather Data", rec_btn: "✨ Get Recommendations", profit_title: "Profit Analyzer",
+                expected_yield: "📊 Expected Yield (kg/ha)", market_price: "💰 Market Price (₹/kg)", production_cost: "💸 Production Cost (₹/ha)",
+                profit_btn: "💰 Calculate Profit", profit_analysis: "Profit Analysis", seed_page_title: "Seed & Fertilizer Recommendations",
+                select_crop_soil: "Select Crop & Soil", farm_area: "Farm Area (acres)", get_rec_btn: "Get Recommendations",
+                recommendations: "📋 Recommendations", tasks_page_title: "Weather-Based Farming Tasks", today_tasks: "🌤️ Today's Tasks",
+                refresh_tasks: "Refresh Tasks", weekly_schedule: "📅 Weekly Schedule", water_page_title: "Smart Water Management",
+                irrigation_calc: "💧 Irrigation Calculator", calculate_water: "Calculate Water Need", water_tips_title: "💡 Water Saving Tips",
+                schemes_page_title: "Government Schemes & Subsidies", available_schemes: "📋 Available Schemes", scheme_info: "📝 Scheme Information",
+                scheme_instruction: "✨ Click on any \"Apply\" button above to visit the official government website and apply directly.",
+                helpline: "📞 Helpline Numbers:", benefit: "💰 Benefit:", eligibility: "👤 Eligibility:", apply_btn: "🔗 Apply",
+                reports_page_title: "Generate PDF Reports", farm_report: "📊 Farm Report", farmer_name: "👨‍🌾 Farmer Name",
+                farm_location: "📍 Farm Location", crop_grown: "🌾 Crop Grown", yield_kg: "📊 Yield (kg/ha)",
+                fertilizer_used: "🧪 Fertilizer Used", download_pdf: "Download PDF Report", preview_title: "📄 Report Preview",
+                preview_msg: "Fill the form and click<br>\"Download PDF Report\"<br>to generate your farm report",
+                analytics_title: "Analytics Hub", map_title: "India Farm Map", map_instruction: "Click on any state marker to see detailed farming information",
+                chat_title: "AI Farming Assistant", chat_welcome: "🌾 Hello! I'm FarmAI, your agricultural assistant!",
+                send_btn: "Send", profile_title: "My Farm Profile", account_access: "👤 Account Access",
+                login_signup: "Login / Sign Up", prediction_history: "📜 Prediction History", farmai_access: "FarmAI Access", close_btn: "Close"
+            },
+            hi: {
+                app_name: "फार्मएआई", tagline: "स्मार्ट कृषि",
+                nav_home: "डैशबोर्ड", nav_predict: "उपज भविष्यवक्ता", nav_recommend: "फसल सलाहकार", nav_profit: "लाभ विश्लेषक",
+                nav_seed: "बीज और उर्वरक", nav_tasks: "मौसम कार्य", nav_water: "जल प्रबंधन", nav_schemes: "सरकारी योजनाएं",
+                nav_reports: "पीडीएफ रिपोर्ट", nav_analytics: "एनालिटिक्स हब", nav_map: "भारत का नक्शा", nav_chatbot: "एआई सहायक", nav_profile: "मेरा फार्म",
+                greeting: "शुभ प्रभात, किसान!", active_farmers: "सक्रिय किसान", avg_yield: "औसत उपज (किग्रा/हे)", avg_profit: "औसत लाभ/हे",
+                seed_title: "🌱 बीज और उर्वरक", seed_desc: "एआई-संचालित सिफारिशें",
+                tasks_title: "📝 मौसम कार्य", tasks_desc: "मौसम के आधार पर दैनिक कार्य",
+                water_title: "💧 जल प्रबंधन", water_desc: "स्मार्ट सिंचाई सलाह",
+                schemes_title: "📋 सरकारी योजनाएं", schemes_desc: "सब्सिडी और लाभ",
+                reports_title: "📄 पीडीएफ रिपोर्ट", reports_desc: "फार्म रिपोर्ट बनाएं",
+                predict_title: "3D उपज भविष्यवक्ता", location: "📍 स्थान", crop_type: "🌱 फसल प्रकार", soil_type: "🏔️ मिट्टी का प्रकार",
+                season: "📅 मौसम", temperature: "🌡️ तापमान (°C)", humidity: "💧 आर्द्रता (%)", rainfall: "☔ वर्षा (मिमी)",
+                fetch_weather: "🌤️ लाइव मौसम लें", predict_btn: "🚀 उपज की भविष्यवाणी करें", result_title: "🎯 उपज भविष्यवाणी",
+                kg_per_ha: "किग्रा/हेक्टेयर", forecast_title: "📈 बहु-वर्षीय पूर्वानुमान", rec_title: "स्मार्ट फसल सलाहकार",
+                get_weather: "मौसम डेटा लें", rec_btn: "✨ सिफारिशें प्राप्त करें", profit_title: "लाभ विश्लेषक",
+                expected_yield: "📊 अपेक्षित उपज (किग्रा/हे)", market_price: "💰 बाजार मूल्य (₹/किग्रा)", production_cost: "💸 उत्पादन लागत (₹/हे)",
+                profit_btn: "💰 लाभ की गणना करें", profit_analysis: "लाभ विश्लेषण", seed_page_title: "बीज और उर्वरक सिफारिशें",
+                select_crop_soil: "फसल और मिट्टी चुनें", farm_area: "खेत का क्षेत्रफल (एकड़)", get_rec_btn: "सिफारिशें प्राप्त करें",
+                recommendations: "📋 सिफारिशें", tasks_page_title: "मौसम-आधारित कृषि कार्य", today_tasks: "🌤️ आज के कार्य",
+                refresh_tasks: "कार्य ताज़ा करें", weekly_schedule: "📅 साप्ताहिक अनुसूची", water_page_title: "स्मार्ट जल प्रबंधन",
+                irrigation_calc: "💧 सिंचाई कैलकुलेटर", calculate_water: "पानी की आवश्यकता गणना करें", water_tips_title: "💡 जल बचत टिप्स",
+                schemes_page_title: "सरकारी योजनाएं और सब्सिडी", available_schemes: "📋 उपलब्ध योजनाएं", scheme_info: "📝 योजना जानकारी",
+                scheme_instruction: "✨ ऊपर किसी भी \"Apply\" बटन पर क्लिक करें सरकारी वेबसाइट पर जाने के लिए",
+                helpline: "📞 हेल्पलाइन नंबर:", benefit: "💰 लाभ:", eligibility: "👤 पात्रता:", apply_btn: "🔗 आवेदन करें",
+                reports_page_title: "पीडीएफ रिपोर्ट बनाएं", farm_report: "📊 फार्म रिपोर्ट", farmer_name: "👨‍🌾 किसान का नाम",
+                farm_location: "📍 फार्म स्थान", crop_grown: "🌾 उगाई गई फसल", yield_kg: "📊 उपज (किग्रा/हे)",
+                fertilizer_used: "🧪 उर्वरक इस्तेमाल किया", download_pdf: "पीडीएफ रिपोर्ट डाउनलोड करें", preview_title: "📄 रिपोर्ट पूर्वावलोकन",
+                preview_msg: "फॉर्म भरें और<br>\"Download PDF Report\" पर क्लिक करें<br>अपनी फार्म रिपोर्ट बनाने के लिए",
+                analytics_title: "एनालिटिक्स हब", map_title: "भारत कृषि मानचित्र", map_instruction: "विस्तृत कृषि जानकारी देखने के लिए किसी राज्य मार्कर पर क्लिक करें",
+                chat_title: "एआई कृषि सहायक", chat_welcome: "🌾 नमस्ते! मैं FarmAI हूं, आपका कृषि सहायक!",
+                send_btn: "भेजें", profile_title: "मेरा फार्म प्रोफाइल", account_access: "👤 खाता पहुंच",
+                login_signup: "लॉगिन / साइन अप", prediction_history: "📜 भविष्यवाणी इतिहास", farmai_access: "फार्मएआई पहुंच", close_btn: "बंद करें"
+            },
+            gu: {
+                app_name: "ફાર્મએઆઈ", tagline: "સ્માર્ટ એગ્રીકલ્ચર",
+                nav_home: "ડેશબોર્ડ", nav_predict: "ઉપજ આગાહીકર્તા", nav_recommend: "પાક સલાહકાર", nav_profit: "નફો વિશ્લેષક",
+                nav_seed: "બીજ અને ખાતર", nav_tasks: "હવામાન કાર્યો", nav_water: "જળ વ્યવસ્થાપન", nav_schemes: "સરકારી યોજનાઓ",
+                nav_reports: "પીડીએફ રિપોર્ટ", nav_analytics: "એનાલિટિક્સ હબ", nav_map: "ભારત નકશો", nav_chatbot: "એઆઈ સહાયક", nav_profile: "મારું ફાર્મ",
+                greeting: "સુપ્રભાત, ખેડૂત!", active_farmers: "સક્રિય ખેડૂત", avg_yield: "સરેરાશ ઉપજ (કિગ્રા/હે)", avg_profit: "સરેરાશ નફો/હે",
+                seed_title: "🌱 બીજ અને ખાતર", seed_desc: "એઆઈ-સંચાલિત ભલામણો",
+                tasks_title: "📝 હવામાન કાર્યો", tasks_desc: "હવામાન આધારિત દૈનિક કાર્યો",
+                water_title: "💧 જળ વ્યવસ્થાપન", water_desc: "સ્માર્ટ સિંચાઈ સલાહ",
+                schemes_title: "📋 સરકારી યોજનાઓ", schemes_desc: "સબસિડી અને લાભો",
+                reports_title: "📄 પીડીએફ રિપોર્ટ", reports_desc: "ફાર્મ રિપોર્ટ બનાવો",
+                predict_title: "3D ઉપજ આગાહીકર્તા", location: "📍 સ્થાન", crop_type: "🌱 પાક પ્રકાર", soil_type: "🏔️ જમીન પ્રકાર",
+                season: "📅 ઋતુ", temperature: "🌡️ તાપમાન (°C)", humidity: "💧 ભેજ (%)", rainfall: "☔ વરસાદ (મિમી)",
+                fetch_weather: "🌤️ લાઈવ હવામાન મેળવો", predict_btn: "🚀 ઉપજની આગાહી કરો", result_title: "🎯 ઉપજ આગાહી",
+                kg_per_ha: "કિગ્રા/હેક્ટર", forecast_title: "📈 બહુ-વર્ષીય આગાહી", rec_title: "સ્માર્ટ પાક સલાહકાર",
+                get_weather: "હવામાન ડેટા મેળવો", rec_btn: "✨ ભલામણો મેળવો", profit_title: "નફો વિશ્લેષક",
+                expected_yield: "📊 અપેક્ષિત ઉપજ (કિગ્રા/હે)", market_price: "💰 બજાર ભાવ (₹/કિગ્રા)", production_cost: "💸 ઉત્પાદન ખર્ચ (₹/હે)",
+                profit_btn: "💰 નફાની ગણતરી કરો", profit_analysis: "નફો વિશ્લેષણ", seed_page_title: "બીજ અને ખાતર ભલામણો",
+                select_crop_soil: "પાક અને જમીન પસંદ કરો", farm_area: "ફાર્મ વિસ્તાર (એકર)", get_rec_btn: "ભલામણો મેળવો",
+                recommendations: "📋 ભલામણો", tasks_page_title: "હવામાન-આધારિત ખેતી કાર્યો", today_tasks: "🌤️ આજના કાર્યો",
+                refresh_tasks: "કાર્યો તાજા કરો", weekly_schedule: "📅 સાપ્તાહિક સમયપત્રક", water_page_title: "સ્માર્ટ જળ વ્યવસ્થાપન",
+                irrigation_calc: "💧 સિંચાઈ કેલ્ક્યુલેટર", calculate_water: "પાણીની જરૂરિયાત ગણો", water_tips_title: "💡 પાણી બચાવ ટિપ્સ",
+                schemes_page_title: "સરકારી યોજનાઓ અને સબસિડી", available_schemes: "📋 ઉપલબ્ધ યોજનાઓ", scheme_info: "📝 યોજના માહિતી",
+                scheme_instruction: "✨ ઉપર કોઈપણ \"Apply\" બટન પર ક્લિક કરો સરકારી વેબસાઇટ પર જવા માટે",
+                helpline: "📞 હેલ્પલાઇન નંબર:", benefit: "💰 લાભ:", eligibility: "👤 પાત્રતા:", apply_btn: "🔗 અરજી કરો",
+                reports_page_title: "પીડીએફ રિપોર્ટ બનાવો", farm_report: "📊 ફાર્મ રિપોર્ટ", farmer_name: "👨‍🌾 ખેડૂતનું નામ",
+                farm_location: "📍 ફાર્મ સ્થાન", crop_grown: "🌾 ઉગાડવામાં આવેલ પાક", yield_kg: "📊 ઉપજ (કિગ્રા/હે)",
+                fertilizer_used: "🧪 ખાતર ઉપયોગ", download_pdf: "પીડીએફ રિપોર્ટ ડાઉનલોડ કરો", preview_title: "📄 રિપોર્ટ પૂર્વાવલોકન",
+                preview_msg: "ફોર્મ ભરો અને<br>\"Download PDF Report\" પર ક્લિક કરો<br>તમારો ફાર્મ રિપોર્ટ બનાવવા માટે",
+                analytics_title: "એનાલિટિક્સ હબ", map_title: "ભારત ખેતી નકશો", map_instruction: "વિગતવાર ખેતી માહિતી જોવા માટે કોઈપણ રાજ્ય માર્કર પર ક્લિક કરો",
+                chat_title: "એઆઈ ખેતી સહાયક", chat_welcome: "🌾 નમસ્તે! હું FarmAI છું, તમારો કૃષિ સહાયક!",
+                send_btn: "મોકલો", profile_title: "મારું ફાર્મ પ્રોફાઇલ", account_access: "👤 એકાઉન્ટ ઍક્સેસ",
+                login_signup: "લોગિન / સાઇન અપ", prediction_history: "📜 આગાહી ઇતિહાસ", farmai_access: "ફાર્મએઆઈ ઍક્સેસ", close_btn: "બંધ કરો"
+            }
+        };
+
+        let currentLang = 'en';
+        
+        function updateLanguage() {
+            document.querySelectorAll('.i18n').forEach(el => {
+                const key = el.getAttribute('data-key');
+                if (translations[currentLang] && translations[currentLang][key]) {
+                    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                        el.placeholder = translations[currentLang][key];
+                    } else if (key === 'greeting') {
+                        // Don't override time-based greeting with translation
+                        return;
+                    } else {
+                        el.innerHTML = translations[currentLang][key];
+                    }
+                }
+            });
+            // Re-apply time-based greeting after language change
+            updateGreeting();
+        }
+        
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentLang = btn.dataset.lang;
+                document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                updateLanguage();
+            });
+        });
+
+        // ==================== NAVIGATION ====================
+        function navigateTo(pageId) {
+            document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+            document.querySelectorAll(`.nav-item[data-page="${pageId}"]`).forEach(nav => nav.classList.add('active'));
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            document.getElementById(`${pageId}-page`).classList.add('active');
+            if (pageId === 'analytics') initCharts();
+            if (pageId === 'map') initMap();
+            if (pageId === 'weather-tasks') refreshTasks();
+            if (pageId === 'water-management') loadWaterTips();
+        }
+        document.querySelectorAll('.nav-item').forEach(item => { item.addEventListener('click', function() { navigateTo(this.dataset.page); }); });
+        document.getElementById('sidebarToggle').addEventListener('click', () => { document.getElementById('sidebar').classList.toggle('collapsed'); });
+
+        // ==================== WEATHER ====================
+        let currentWeather = { temp: 28, condition: 'clear', rainfall: 0 };
+        function updateWeatherBackground(weather) {
+            const sunElement = document.getElementById('sunElement'), moonElement = document.getElementById('moonElement'), cloudContainer = document.getElementById('cloudContainer'), rainContainer = document.getElementById('rainContainer');
+            if (cloudContainer) cloudContainer.innerHTML = '';
+            if (rainContainer) rainContainer.innerHTML = '';
+            const hour = new Date().getHours(), isDay = hour >= 6 && hour <= 18;
+            if (sunElement) sunElement.style.display = isDay && weather.condition !== 'rain' ? 'block' : 'none';
+            if (moonElement) moonElement.style.display = !isDay && weather.condition !== 'rain' ? 'block' : 'none';
+            if (weather.condition.includes('cloud') || weather.rainfall > 0) { for (let i = 0; i < 5; i++) { const cloud = document.createElement('div'); cloud.className = 'cloud'; cloud.style.width = `${80 + Math.random() * 60}px`; cloud.style.height = `${40 + Math.random() * 30}px`; cloud.style.top = `${Math.random() * 40}%`; cloud.style.animationDelay = `${Math.random() * 10}s`; cloudContainer.appendChild(cloud); } }
+            if (weather.rainfall > 10) { for (let i = 0; i < 150; i++) { const rain = document.createElement('div'); rain.className = 'rain-drop'; rain.style.left = `${Math.random() * 100}%`; rainContainer.appendChild(rain); } }
+        }
+        async function updateWeather() {
+            try { const response = await fetch('/api/weather?city=Mumbai'); const data = await response.json(); if (data.success) { currentWeather = { temp: data.temperature, condition: data.condition, rainfall: data.rainfall }; document.getElementById('currentTemp').innerHTML = `${data.temperature}°C`; document.getElementById('weatherCondition').innerHTML = data.condition; document.getElementById('weatherDetails').innerHTML = `<div class="weather-detail"><i class="fas fa-tint"></i> ${data.humidity}% Humidity</div><div class="weather-detail"><i class="fas fa-cloud-rain"></i> ${data.rainfall} mm Rain</div><div class="weather-detail"><i class="fas fa-wind"></i> ${data.wind_speed || 12} km/h Wind</div>`; updateWeatherBackground(currentWeather); if (document.getElementById('weather-tasks-page').classList.contains('active')) refreshTasks(); } } catch(e) { console.error('Weather error:', e); }
+        }
+
+        // ==================== YIELD GAUGE ====================
+        function drawYieldGauge(value, maxValue = 8000) { const canvas = document.getElementById('yieldGauge'); if (!canvas) return; const ctx = canvas.getContext('2d'); const centerX = canvas.width / 2, centerY = canvas.height / 2, radius = 80, percentage = Math.min(value / maxValue, 1), angle = percentage * Math.PI * 2; ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(255, 215, 0, 0.2)'; ctx.lineWidth = 12; ctx.stroke(); ctx.beginPath(); ctx.arc(centerX, centerY, radius, -Math.PI / 2, -Math.PI / 2 + angle); ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 12; ctx.stroke(); }
+
+        // ==================== SEED & FERTILIZER ====================
+        function getSeedFertilizerRecommendations() {
+            const crop = document.getElementById('rec-crop').value, area = document.getElementById('farm-area').value;
+            const seedData = { 'Rice': { varieties: ['IR-64', 'Pusa Basmati', 'Swarna'], rate: '40-50 kg/acre' }, 'Wheat': { varieties: ['HD-2967', 'PBW-343', 'GW-322'], rate: '100-120 kg/acre' }, 'Maize': { varieties: ['HQPM-1', 'PMH-1', 'Ganga-11'], rate: '20-25 kg/acre' }, 'Cotton': { varieties: ['Bt Cotton', 'Vikas', 'LRA-5166'], rate: '2-3 kg/acre' }, 'Sugarcane': { varieties: ['Co-0238', 'Co-86032', 'CoM-0265'], rate: '3000-3500 kg/acre' } };
+            const fertilizerData = { 'Rice': { npk: '120:60:40', organic: 'FYM 10 tons/ha' }, 'Wheat': { npk: '150:60:40', organic: 'FYM 8 tons/ha' }, 'Maize': { npk: '180:60:40', organic: 'FYM 12 tons/ha' }, 'Cotton': { npk: '100:50:50', organic: 'FYM 15 tons/ha' }, 'Sugarcane': { npk: '250:120:120', organic: 'FYM 25 tons/ha' } };
+            const seed = seedData[crop], fert = fertilizerData[crop];
+            document.getElementById('seed-recommendation').innerHTML = `<div style="background:rgba(255,215,0,0.1);padding:12px;border-radius:12px;margin-bottom:15px;"><h4>🌱 Seed Recommendations</h4><p><strong>Varieties:</strong> ${seed.varieties.join(', ')}</p><p><strong>Seed Rate:</strong> ${seed.rate}</p><p><strong>For ${area} acre(s):</strong> ${parseInt(seed.rate.split('-')[0]) * area} - ${parseInt(seed.rate.split('-')[1].split(' ')[0]) * area} kg needed</p></div>`;
+            document.getElementById('fertilizer-recommendation').innerHTML = `<div style="background:rgba(255,215,0,0.1);padding:12px;border-radius:12px;"><h4>🧪 Fertilizer Recommendations</h4><p><strong>NPK Ratio:</strong> ${fert.npk}</p><p><strong>Organic Manure:</strong> ${fert.organic}</p><p><strong>Application:</strong> Basal dose at sowing, top dressing at 30-45 days</p></div>`;
+        }
+
+        // ==================== WEATHER TASKS ====================
+        function refreshTasks() {
+            const temp = parseInt(document.getElementById('currentTemp')?.innerHTML || '28'), condition = document.getElementById('weatherCondition')?.innerHTML || 'clear', month = new Date().getMonth();
+            let todayTasks = [], weeklyTasks = [];
+            if (temp > 35) { todayTasks.push({ task: '💧 Increase irrigation frequency', completed: false }); todayTasks.push({ task: '🌞 Provide shade to young plants', completed: false }); }
+            else if (temp < 15) { todayTasks.push({ task: '❄️ Protect crops from frost', completed: false }); todayTasks.push({ task: '🌾 Apply mulch for insulation', completed: false }); }
+            else { todayTasks.push({ task: '✅ Optimal conditions - Maintain regular care', completed: false }); }
+            if (condition.includes('rain')) { todayTasks.push({ task: '☔ Stop irrigation - rainfall sufficient', completed: false }); todayTasks.push({ task: '🚿 Clear drainage channels', completed: false }); }
+            if (month >= 5 && month <= 7) { todayTasks.push({ task: '🌾 Sow Kharif crops (Rice, Maize, Cotton)', completed: false }); weeklyTasks = ['Week 1: Land preparation', 'Week 2: Seed treatment and sowing', 'Week 3: First irrigation', 'Week 4: Weed control']; }
+            else if (month >= 9 && month <= 11) { todayTasks.push({ task: '🌾 Sow Rabi crops (Wheat, Mustard, Peas)', completed: false }); weeklyTasks = ['Week 1: Field preparation', 'Week 2: Sowing with seed drill', 'Week 3: First irrigation', 'Week 4: Fertilizer application']; }
+            document.getElementById('today-tasks').innerHTML = todayTasks.map((task, i) => `<div class="task-item"><input type="checkbox" class="task-checkbox" onchange="toggleTask(${i})"><span>${task.task}</span></div>`).join('');
+            document.getElementById('weekly-tasks').innerHTML = weeklyTasks.map(task => `<div class="task-item"><i class="fas fa-calendar-week" style="color:#ffd700;"></i><span>${task}</span></div>`).join('');
+        }
+        function toggleTask(index) { refreshTasks(); }
+
+        // ==================== WATER MANAGEMENT ====================
+        function calculateWaterRequirement() {
+            const crop = document.getElementById('water-crop').value, area = parseInt(document.getElementById('water-area').value);
+            const waterData = { 'Rice': { perAcre: 1200, frequency: 'Daily' }, 'Wheat': { perAcre: 400, frequency: 'Weekly' }, 'Maize': { perAcre: 500, frequency: 'Every 5-7 days' }, 'Cotton': { perAcre: 600, frequency: 'Every 7-10 days' } };
+            const data = waterData[crop];
+            document.getElementById('water-result').innerHTML = `<div style="background:rgba(255,215,0,0.1);padding:12px;border-radius:12px;"><p><strong>💧 Total Water Required:</strong> ${data.perAcre * area} liters per day</p><p><strong>📅 Irrigation Frequency:</strong> ${data.frequency}</p><p><strong>⏰ Best Time:</strong> Early morning (5-7 AM)</p></div>`;
+        }
+        function loadWaterTips() {
+            const tips = ['💡 Drip irrigation saves 40-60% water', '💡 Water early morning to reduce evaporation by 30%', '💡 Mulching reduces water requirement by 50%', '💡 Rainwater harvesting can supplement irrigation', '💡 Install moisture sensors for precise watering'];
+            document.getElementById('water-tips').innerHTML = tips.map(tip => `<div class="task-item"><i class="fas fa-lightbulb" style="color:#ffd700;"></i><span>${tip}</span></div>`).join('');
+        }
+
+        // ==================== PDF REPORT - FIXED WITH 2026 DATE AND BETTER ALIGNMENT ====================
+        async function generatePDFReport() {
+            const name = document.getElementById('report-name').value || 'Farmer';
+            const location = document.getElementById('report-location').value || 'Unknown';
+            const crop = document.getElementById('report-crop').value || 'Not specified';
+            const yieldVal = document.getElementById('report-yield').value || 'N/A';
+            const fertilizer = document.getElementById('report-fertilizer').value || 'Not specified';
+            
+            const currentYear = new Date().getFullYear();
+            const formattedDate = new Date().toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            
+            const previewHTML = `
+                <div style="background: rgba(255,215,0,0.15); padding: 20px; border-radius: 16px; border-left: 4px solid #ffd700;">
+                    <h4 style="color: #ffd700; margin-bottom: 15px;">📄 Farm Report Preview</h4>
+                    <div style="margin-bottom: 10px;"><strong style="color: #ffd700;">👨‍🌾 Farmer Name:</strong> <span style="color: #fff;">${name}</span></div>
+                    <div style="margin-bottom: 10px;"><strong style="color: #ffd700;">📍 Farm Location:</strong> <span style="color: #fff;">${location}</span></div>
+                    <div style="margin-bottom: 10px;"><strong style="color: #ffd700;">🌾 Crop Grown:</strong> <span style="color: #fff;">${crop}</span></div>
+                    <div style="margin-bottom: 10px;"><strong style="color: #ffd700;">📊 Yield:</strong> <span style="color: #fff;">${yieldVal} kg/ha</span></div>
+                    <div style="margin-bottom: 10px;"><strong style="color: #ffd700;">🧪 Fertilizer Used:</strong> <span style="color: #fff;">${fertilizer}</span></div>
+                    <div style="margin-bottom: 10px;"><strong style="color: #ffd700;">📅 Report Date:</strong> <span style="color: #fff;">${formattedDate}</span></div>
+                    <div style="margin-top: 15px; background: #4ade80; color: #0a192f; padding: 10px; border-radius: 8px; text-align: center;">
+                        ✅ PDF Report Downloaded Successfully!
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('preview-content').innerHTML = previewHTML;
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Header with logo effect
+            doc.setFontSize(22);
+            doc.setTextColor(255, 215, 0);
+            doc.text('🌾 FARMAI AGRICULTURAL REPORT', 105, 25, { align: 'center' });
+            
+            doc.setFontSize(10);
+            doc.setTextColor(150, 150, 150);
+            doc.text(`Generated on: ${formattedDate}`, 105, 35, { align: 'center' });
+            doc.line(20, 42, 190, 42);
+            
+            // Farm Details Section
+            doc.setFontSize(14);
+            doc.setTextColor(255, 215, 0);
+            doc.text('📋 FARM DETAILS', 20, 55);
+            
+            doc.setFontSize(11);
+            doc.setTextColor(255, 255, 255);
+            doc.text(`Farmer Name: ${name}`, 25, 70);
+            doc.text(`Farm Location: ${location}`, 25, 80);
+            doc.text(`Crop Grown: ${crop}`, 25, 90);
+            doc.text(`Yield: ${yieldVal} kg/hectare`, 25, 100);
+            doc.text(`Fertilizer Used: ${fertilizer}`, 25, 110);
+            
+            // Recommendations Section
+            doc.setFontSize(14);
+            doc.setTextColor(255, 215, 0);
+            doc.text('📊 RECOMMENDATIONS', 20, 130);
+            
+            doc.setFontSize(11);
+            doc.setTextColor(255, 255, 255);
+            doc.text('✓ Use certified seeds for 20-30% higher yield', 25, 145);
+            doc.text('✓ Practice crop rotation for soil health', 25, 155);
+            doc.text('✓ Implement drip irrigation for water efficiency', 25, 165);
+            doc.text('✓ Regular soil testing every 2-3 years', 25, 175);
+            doc.text('✓ Apply fertilizers based on soil test results', 25, 185);
+            
+            // Weather Data Section
+            const temp = document.getElementById('currentTemp')?.innerHTML || '28°C';
+            const condition = document.getElementById('weatherCondition')?.innerHTML || 'Clear';
+            doc.setFontSize(14);
+            doc.setTextColor(255, 215, 0);
+            doc.text('🌤️ WEATHER DATA', 20, 210);
+            
+            doc.setFontSize(11);
+            doc.setTextColor(255, 255, 255);
+            doc.text(`Current Temperature: ${temp}`, 25, 225);
+            doc.text(`Weather Condition: ${condition}`, 25, 235);
+            
+            // Footer
+            doc.setFontSize(9);
+            doc.setTextColor(150, 150, 150);
+            doc.text('Generated by FarmAI - Smart Agricultural Intelligence System', 105, 275, { align: 'center' });
+            doc.text(`© ${currentYear} FarmAI | Empowering Farmers with AI`, 105, 285, { align: 'center' });
+            
+            // Save PDF
+            const fileName = `Farm_Report_${name.replace(/\s/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
+            doc.save(fileName);
+            
+            const btn = document.getElementById('pdfDownloadBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check"></i> PDF Downloaded!';
+            setTimeout(() => { btn.innerHTML = originalText; }, 3000);
+        }
+
+        // ==================== MAP ====================
+        let map;
+        function initMap() {
+            if (map) return;
+            map = L.map('indiaMap').setView([20.5937, 78.9629], 5);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
+            const states = [
+                { name: 'Punjab', coords: [30.7333, 76.7794], crops: 'Wheat, Rice, Maize', yield: '4,500 kg/ha', season: 'Rabi (Oct-Mar), Kharif (Jun-Sep)', irrigation: 'Canal & Tube well', soil: 'Alluvial', tips: 'Use certified seeds, practice crop rotation' },
+                { name: 'Uttar Pradesh', coords: [26.8467, 80.9462], crops: 'Wheat, Rice, Sugarcane', yield: '3,800 kg/ha', season: 'Rabi (Oct-Mar), Kharif (Jun-Sep)', irrigation: 'Canal & Tubewell', soil: 'Alluvial, Loamy', tips: 'Maintain proper spacing' },
+                { name: 'Maharashtra', coords: [19.7515, 75.7139], crops: 'Cotton, Sugarcane, Soybean', yield: '3,200 kg/ha', season: 'Kharif (Jun-Sep)', irrigation: 'Rainfed & Drip', soil: 'Black Cotton', tips: 'Drip irrigation recommended' },
+                { name: 'Gujarat', coords: [22.2587, 71.1924], crops: 'Cotton, Groundnut, Castor', yield: '3,500 kg/ha', season: 'Kharif (Jun-Sep)', irrigation: 'Drip & Sprinkler', soil: 'Black, Sandy Loam', tips: 'Use BT cotton seeds' },
+                { name: 'West Bengal', coords: [22.9868, 87.8550], crops: 'Rice, Jute, Potato', yield: '4,200 kg/ha', season: 'Kharif (Jun-Sep)', irrigation: 'Rainfed & Canal', soil: 'Alluvial', tips: 'High yielding rice varieties' },
+                { name: 'Tamil Nadu', coords: [11.1271, 78.6569], crops: 'Rice, Sugarcane, Banana', yield: '3,800 kg/ha', season: 'Kharif & Rabi', irrigation: 'Canal & Tank', soil: 'Red, Black', tips: 'SRI method works well' }
+            ];
+            states.forEach(state => {
+                const marker = L.marker(state.coords).addTo(map);
+                marker.bindPopup(`<div style="min-width:250px;"><h3 style="color:#ffd700;">${state.name}</h3><p><strong>🌾 Crops:</strong> ${state.crops}</p><p><strong>📊 Yield:</strong> ${state.yield}</p><p><strong>📅 Season:</strong> ${state.season}</p><p><strong>💧 Irrigation:</strong> ${state.irrigation}</p><p><strong>🏔️ Soil:</strong> ${state.soil}</p><p><strong>💡 Tip:</strong> ${state.tips}</p></div>`);
+                marker.on('click', () => { document.getElementById('mapInfo').innerHTML = `<h3 style="color:#ffd700;">📍 ${state.name}</h3><p><strong>🌾 Crops:</strong> ${state.crops}</p><p><strong>📊 Avg Yield:</strong> ${state.yield}</p><p><strong>📅 Season:</strong> ${state.season}</p><p><strong>💧 Irrigation:</strong> ${state.irrigation}</p><p><strong>🏔️ Soil:</strong> ${state.soil}</p><div style="background:rgba(255,215,0,0.1);padding:10px;border-radius:12px;margin-top:10px;"><strong>💡 Expert Tip:</strong><br>${state.tips}</div>`; });
+            });
+        }
+
+        // ==================== CHARTS ====================
+        function initCharts() {
+            const ctx1 = document.getElementById('rainfallChart')?.getContext('2d'), ctx2 = document.getElementById('cropChart')?.getContext('2d'), ctx3 = document.getElementById('seasonalChart')?.getContext('2d');
+            if (ctx1) new Chart(ctx1, { type: 'line', data: { labels: ['50mm','100mm','150mm','200mm','250mm','300mm'], datasets: [{ label: 'Yield (kg/ha)', data: [2800,3500,4200,4500,4300,4000], borderColor: '#ffd700', fill: true, tension: 0.4 }] }, options: { responsive: true } });
+            if (ctx2) new Chart(ctx2, { type: 'bar', data: { labels: ['Rice','Wheat','Maize','Cotton','Sugarcane'], datasets: [{ label: 'Yield (kg/ha)', data: [4200,3800,3500,2800,7500], backgroundColor: '#ffd700' }] }, options: { responsive: true } });
+            if (ctx3) new Chart(ctx3, { type: 'line', data: { labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], datasets: [{ label: 'Yield Trend', data: [2500,2800,3100,3400,3600,3800,4200,4400,4100,3800,3400,3000], borderColor: '#ffd700', fill: true }] }, options: { responsive: true } });
+        }
+
+        // ==================== API CALLS ====================
+        document.getElementById('prediction-form')?.addEventListener('submit', async (e) => { e.preventDefault(); const data = { crop_type: document.getElementById('crop-type').value, location: document.getElementById('city').value, rainfall: parseFloat(document.getElementById('rainfall').value), temperature: parseFloat(document.getElementById('temperature').value), soil_type: document.getElementById('soil-type').value, season: document.getElementById('season').value, humidity: parseFloat(document.getElementById('humidity').value) }; const response = await fetch('/api/predict', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); const result = await response.json(); if (result.success) { document.getElementById('yield-value').innerHTML = result.yield.toFixed(2); drawYieldGauge(result.yield, 8000); document.getElementById('forecast').innerHTML = `<p>📅 Next Season: ${result.next_season_yield.toFixed(2)} kg/ha</p><p>📅 Next Year: ${result.next_year_yield.toFixed(2)} kg/ha</p>`; document.getElementById('prediction-result').style.display = 'block'; } });
+        document.getElementById('recommendation-form')?.addEventListener('submit', async (e) => { e.preventDefault(); const data = { temperature: parseFloat(document.getElementById('rec-temperature').value), rainfall: parseFloat(document.getElementById('rec-rainfall').value), humidity: parseFloat(document.getElementById('rec-humidity').value), soil_type: document.getElementById('rec-soil').value }; const response = await fetch('/api/recommend', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); const result = await response.json(); if (result.success) { document.getElementById('crop-list').innerHTML = result.recommendations.map(crop => `<div class="crop-card"><i class="fas fa-seedling" style="color:#ffd700;"></i> <strong>${crop.name}</strong><br>Confidence: ${crop.confidence}%<br>Expected Yield: ${crop.expected_yield.toFixed(2)} kg/ha</div>`).join(''); document.getElementById('recommendation-result').style.display = 'block'; } });
+        document.getElementById('profit-form')?.addEventListener('submit', async (e) => { e.preventDefault(); const data = { crop_type: document.getElementById('profit-crop').value, yield_amount: parseFloat(document.getElementById('yield-input').value), market_price: parseFloat(document.getElementById('market-price').value), production_cost: parseFloat(document.getElementById('cost-input').value) }; const response = await fetch('/api/profit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }); const result = await response.json(); if (result.success) { document.getElementById('profit-value').innerHTML = `₹${result.profit.toFixed(2)}`; document.getElementById('profit-breakdown').innerHTML = `<p>💰 Revenue: ₹${result.revenue.toFixed(2)}</p><p>💸 Cost: ₹${result.cost.toFixed(2)}</p><p>📈 Margin: ${result.margin.toFixed(1)}%</p>`; document.getElementById('profit-result').style.display = 'block'; } });
+
+        // ==================== CHATBOT ====================
+        document.getElementById('send-message')?.addEventListener('click', sendMessage); document.getElementById('chat-input')?.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+        async function sendMessage() { const input = document.getElementById('chat-input'); const message = input.value.trim(); if (!message) return; addMessage(message, 'user'); input.value = ''; const response = await fetch('/api/chatbot', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message }) }); const data = await response.json(); addMessage(data.response, 'bot'); }
+        function addMessage(text, sender) { const messagesDiv = document.getElementById('chat-messages'); const messageDiv = document.createElement('div'); messageDiv.className = `message ${sender}`; messageDiv.innerHTML = `<div class="message-content">${text}</div>`; messagesDiv.appendChild(messageDiv); messagesDiv.scrollTop = messagesDiv.scrollHeight; }
+
+        // ==================== WEATHER FETCH ====================
+        document.getElementById('fetch-weather')?.addEventListener('click', async () => { const city = document.getElementById('city').value; if (!city) { alert('Enter city name'); return; } const response = await fetch(`/api/weather?city=${city}`); const data = await response.json(); if (data.success) { document.getElementById('temperature').value = data.temperature; document.getElementById('humidity').value = data.humidity; document.getElementById('rainfall').value = data.rainfall; alert('🌤️ Weather Data Fetched!'); } });
+        document.getElementById('rec-fetch-weather')?.addEventListener('click', async () => { const city = document.getElementById('rec-city').value; if (!city) { alert('Enter city name'); return; } const response = await fetch(`/api/weather?city=${city}`); const data = await response.json(); if (data.success) { document.getElementById('rec-temperature').value = data.temperature; document.getElementById('rec-humidity').value = data.humidity; document.getElementById('rec-rainfall').value = data.rainfall; alert('🌤️ Weather Data Fetched!'); } });
+
+        // ==================== AUTH ====================
+        let currentUser = null;
+        document.getElementById('showLoginBtn')?.addEventListener('click', () => { document.getElementById('authModal').classList.add('active'); });
+        document.getElementById('modalLoginBtn')?.addEventListener('click', async () => { const email = document.getElementById('modalEmail').value; const password = document.getElementById('modalPassword').value; const response = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) }); const data = await response.json(); if (data.success) { currentUser = data.user; document.getElementById('userInfo').innerHTML = `<div style="text-align:center;"><i class="fas fa-user-circle" style="font-size:64px;color:#ffd700;"></i><h3>Welcome, ${email.split('@')[0]}!</h3></div>`; document.getElementById('showLoginBtn').style.display = 'none'; document.getElementById('history-section').style.display = 'block'; document.getElementById('authModal').classList.remove('active'); } else { alert('Login failed'); } });
+        function closeModal(modalId) { document.getElementById(modalId).classList.remove('active'); }
+        function showTip(type) { const tips = { farmer: '👨‍🌾 You are the 1st active farmer! Join our community!', yield: '📊 Increase yield by 20-30% with proper soil management', profit: '💰 Maximize profits through efficient resource use' }; document.getElementById('tipTitle').innerHTML = '🌱 Farming Tip'; document.getElementById('tipContent').innerHTML = tips[type] || tips.farmer; document.getElementById('tipModal').classList.add('active'); }
+
+        // ==================== INITIALIZE ====================
+        document.addEventListener('DOMContentLoaded', () => { 
+            updateGreeting();
+            updateLanguage(); 
+            updateWeather(); 
+            setInterval(updateWeather, 300000); 
+            initCharts(); 
+            document.getElementById('currentDate').innerHTML = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }); 
+            loadWaterTips(); 
+            console.log('✅ FarmAI Complete System Ready!'); 
+            
+            // Update greeting every minute
+            setInterval(updateGreeting, 60000);
+        });
+    </script>
+
+</body>
+</html>
