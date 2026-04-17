@@ -57,7 +57,7 @@ FarmAI addresses these challenges by providing:
 | 🗺️ **Interactive India Map** | State-wise farming data visualization |
 | 📊 **Analytics Dashboard** | Charts for rainfall vs yield, crop comparison |
 | 👤 **User System** | Login/Signup with prediction history |
-| 🌍 **Multi-Language** | English, Hindi, Gujarati support |
+| 🌍 **Multi-Language** | Supports 22+ languages including English, Hindi, Gujarati, Marathi, Bengali, Punjabi, Tamil, Telugu, Kannada, Malayalam, Odia, Assamese, Urdu, Sanskrit and more |
 | 📄 **PDF Reports** | Generate professional farm reports |
 
 ### Advanced Features
