@@ -177,7 +177,7 @@ Get your free API key
 
 Update in app.py:
 
-WEATHER_API_KEY = "7c1b56b88375d9d8e05aa07d8506500d"
+WEATHER_API_KEY  = "your_api_key_here",
 
 Step 5: Run the Application
 python app.py
